@@ -1,0 +1,112 @@
+#!/bin/bash
+
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+echo "Enter an IP"
+read user_ip
+
+#cheking if the applications are installed on the system.
+function check() {
+
+	echo -e "\nChecking if geoip is installed or not"
+	
+	if [[ ! -z $(dpkg -s geoip-bin 2>/dev/null) ]]
+	then
+		echo -e "geoip is installed on this system.\n"
+	else
+	
+		echo "install the packge"
+		apt-get install geoip-bin -y
+		echo "geoip-bin is installed"
+fi
+
+echo -e "\nChecking if anonsurf is installed"
+
+if [[ ! -z $(dpkg -s kali-anonsurf 2>/dev/null) ]]
+then
+	echo -e "Anonsurf is Installed on this system.\n"
+else
+	echo "Anonsurf is not installed on this system."
+	echo "installing anonsurf"
+	git clone https://github.com/Und3rf10w/kali-anonsurf.git && cd kali-anonsurf && bash installer.sh
+	echo "Anonsurf is installed " 
+fi
+
+	echo -e "\nChecking if ssh is installed or not"
+	
+	if [[ ! -z $(dpkg -s sshpass 2>/dev/null) ]]
+	then
+		echo -e "ssh is installed on this system.\n"
+	else
+	
+		echo "install the packge"
+		apt-get install sshpass -y
+		echo "sshpass is installed"
+fi
+
+	echo -e "\nChecking if Nmap is installed or not"
+	if [[ ! -z $(dpkg -s nmap 2>/dev/null) ]]
+	then
+		echo -e "Nmap is installed on this system.\n"
+	else
+		echo "Nmap is not installed on this system."
+		echo "Installing Nmap"
+		apt-get install nmap -y
+		echo "Nmap is installed"
+fi
+}
+sleep 2
+
+#checking if you are in anonymos mode
+function anon_check() {
+	IP=$(curl -s ifconfig.me)
+	country=$(geoiplookup $IP | awk '{print $4}' | cut -d , -f1)
+	echo "Checking if your anonymous or not"
+	if [[ $country == "IL" ]]
+	then
+		echo "Your not anonymous , your locateded in $country"
+		echo "Starting anonsurf"
+		sleep 1
+		anon
+	else	
+		echo "Your are anonymous"
+	sleep 2
+fi
+
+	if [[ $country != "IL" ]]
+	then
+		echo "Your spoofed IP is $IP, Spoofed country: $country"
+		sshp
+fi		 
+}
+
+#will start anonsurf tool
+function anon() {
+		echo "kali"
+		sudo anonsurf start
+		sleep 1
+		anon_check
+}
+sleep 2
+
+#function that checks if you are connected via ssh
+function sshp() {
+VPUSER='kali'
+VPPASS='kali'
+VPIP='192.168.136.129'
+
+	echo "starting ssh conection"
+sshpass -p $VPPASS ssh -o StrictHostKeyChecking=no $VPUSER@$VPIP "whois $user_ip;nmap -Pn $user_ip" > nmap_out.txt
+	echo "output saved in file nmap_out.txt"	
+	sleep 1
+	cat nmap_out.txt
+	
+}
+
+
+check
+anon_check
